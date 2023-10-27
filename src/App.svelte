@@ -43,6 +43,7 @@
       País: "Argentina",
       y: -34.6372,
       x: -58.5295,
+      image: "./img/img_satellite/Buenos_Aires.png",
     },
     {
       KM: "Km 18",
@@ -64,6 +65,7 @@
       País: "Argentina",
       y: -34.4585,
       x: -58.5565,
+      image: "./img/img_satellite/Buenos_Aires.png",
     },
     {
       KM: "Km 31.1",
@@ -71,6 +73,7 @@
       País: "Argentina",
       y: -34.4251,
       x: -58.5796,
+      image: "./img/img_satellite/Buenos_Aires.png",
     },
     {
       KM: "Km 52",
@@ -103,18 +106,35 @@
   let userInteracting = false;
   let spinEnabled = true;
   let click = false;
+  let pointPositions = [];
 
   let imageUrl = "./img/logo-bienal-white.svg"; // change this to your image path
-
   // At low zooms, complete a revolution every two minutes.
   const secondsPerRevolution = 120;
   // Above zoom level 5, do not rotate.
   const maxSpinZoom = 5;
   // Rotate at intermediate speeds between zoom levels 3 and 5.
   const slowSpinZoom = 3;
-
+  let filledLineLength = 0;
   const kmValues = data.map((d) => parseFloat(d.KM.split(" ")[1] || 0));
   let initialStateKM = kmValues;
+
+  function handleScroll() {
+    const scrollPercentage =
+      (window.scrollY / (document.body.scrollHeight - window.innerHeight)) *
+      100;
+    filledLineLength = scrollPercentage;
+  }
+
+  function calculatePointPositions() {
+    // Créer une copie de data sans le premier élément
+    let points = data.slice(1);
+
+    let totalPoints = data.length;
+    console.log(points);
+    pointPositions = data.map((_, index) => (index / totalPoints) * 100);
+    console.log(pointPositions);
+  }
 
   function random(min, max) {
     return Math.random() * (max - min) + min;
@@ -167,9 +187,7 @@
       };
     } else {
       return {
-        content: `<p>Étape ${index} - ${
-          item.Ciudad || item.País || "Aucune information disponible"
-        }</p>`,
+        content: ``,
       };
     }
   });
@@ -196,6 +214,14 @@
   }
 
   onMount(() => {
+    window.scrollTo(0, 0);
+
+    // Réinitialiser currentStep à 0
+    currentStep = -1;
+
+    calculatePointPositions();
+    window.addEventListener("scroll", handleScroll);
+
     if (currentStep >= 0) {
       scrollToCurrentStep();
     }
@@ -284,15 +310,25 @@
   <div class="center-container">
     <!-- Un conteneur intermédiaire pour la ligne, qui sera centré verticalement -->
     <div class="line-container">
-      <div class="line" />
       {#each data as point, i}
         {#if point.Ciudad != ""}
-          <div class="point" on:click={() => handlePointClick(i)}>
+          <div
+            class="point"
+            style="left: {pointPositions[i]}%"
+            on:click={() => handlePointClick(i)}
+          >
+            <div
+              class={currentStep === i
+                ? "point-circle point-circle-active"
+                : "point-circle"}
+            />
             <span class="point-text">{point.Ciudad}</span>
           </div>
         {/if}
       {/each}
+      <div class="line" />
     </div>
+    <div class="filled-line" style="width: {filledLineLength}%" />
   </div>
   {#if currentStep == 0}
     <img src={imageUrl} alt="Logo" class="logo-image" />
@@ -386,7 +422,7 @@
 
   /* Scrollytelling CSS */
   .step {
-    height: 300vh;
+    height: 400vh;
     display: flex;
     place-items: center;
     justify-content: center;
@@ -424,28 +460,60 @@
     position: fixed;
     background-color: #000;
   }
+
   .line-container {
     display: flex;
     justify-content: space-around;
     align-items: center;
     position: relative;
     height: 100px;
-    width: 90%;
+    width: 100%;
   }
   .line {
     position: absolute;
     width: 100%;
     height: 2px; /* Épaisseur de la ligne */
-    background-color: white;
+    background-color: black;
     top: 50%;
+  }
+
+  .filled-line {
+    position: absolute;
+    left: 0; /* Démarre à gauche */
+    width: 0; /* Largeur initiale */
+    height: 2px; /* Même épaisseur que .line */
+    background-color: white; /* Couleur de remplissage */
+    top: 50%;
+    transition: width 0.3s ease; /* Transition douce pour le remplissage */
   }
   .point {
     width: 10px;
     height: 10px;
     background-color: white;
     border-radius: 50%;
-    position: relative;
-    margin: 0 2vw;
+    position: absolute;
+    /* Ajustement pour le centrage vertical */
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+  }
+
+  .point-circle {
+    width: 10px;
+    height: 10px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease; /* Animation pour l'agrandissement */
+  }
+
+  .point-circle-active {
+    transform: scale(1.5); /* Double la taille */
+  }
+  .point-circle:hover {
+    transform: scale(1.5); /* Double la taille */
+    background-color: rgb(255, 162, 0);
+    cursor: pointer;
+    transition: transform 0.1s ease; /* Animation pour l'agrandissement */
   }
 
   .point-text {
